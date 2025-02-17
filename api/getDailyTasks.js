@@ -1,26 +1,33 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import axios from "axios";
 
-// AWS S3 Configuration (Hardcoded Region)
 const s3 = new S3Client({ region: "us-east-1" }); // Hardcoded AWS region
 
-const bucketName = "social-media-automation-daily-tasks"; // Hardcoded S3 bucket name
-const chatGPTTaskEndpoint = "https://api.openai.com/v1/completions"; // Updated OpenAI API endpoint
+const bucketName = "social-media-automation-daily-tasks"; // S3 bucket name
+const chatGPTTaskEndpoint = "https://api.openai.com/v1/completions"; // OpenAI API
 
 const headers = {
-    "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, // OpenAI API key must be set in Lambda environment variables
+    "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
     "Content-Type": "application/json"
 };
 
 async function fetchChatGPTTasks() {
     try {
-        const response = await axios.post(chatGPTTaskEndpoint, {
-            model: "gpt-4",
-            prompt: "Generate unique Cloud Engineering, DevOps, and AI daily tasks for Facebook, Instagram, and LinkedIn.",
-            max_tokens: 200
-        }, { headers });
+        const response = await fetch(chatGPTTaskEndpoint, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                model: "gpt-4",
+                prompt: "Generate unique Cloud Engineering, DevOps, and AI daily tasks for Facebook, Instagram, and LinkedIn.",
+                max_tokens: 200
+            })
+        });
 
-        return response.data.choices[0].text.trim();
+        if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].text.trim();
     } catch (error) {
         console.error("Error fetching tasks from ChatGPT:", error);
         return null;
