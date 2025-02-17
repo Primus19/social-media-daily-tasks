@@ -1,18 +1,21 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "social-tasks-api",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm install && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "openai": "^4.28.0",
+    "@aws-sdk/client-s3": "^3.525.0",
+    "date-fns": "^3.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
