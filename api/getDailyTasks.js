@@ -1,19 +1,21 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import axios from "axios";
 
-const s3 = new S3Client({ region: "us-east-1" });
+// AWS S3 Configuration (Hardcoded Region)
+const s3 = new S3Client({ region: "us-east-1" }); // Hardcoded AWS region
 
-const bucketName = "social-media-automation-daily-tasks";
-const chatGPTTaskEndpoint = "https://api.openai.com/v1/engines/text-davinci-003/completions"; // Replace with actual ChatGPT API endpoint
+const bucketName = "social-media-automation-daily-tasks"; // Hardcoded S3 bucket name
+const chatGPTTaskEndpoint = "https://api.openai.com/v1/completions"; // Updated OpenAI API endpoint
 
 const headers = {
-    "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+    "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, // OpenAI API key must be set in Lambda environment variables
     "Content-Type": "application/json"
 };
 
 async function fetchChatGPTTasks() {
     try {
         const response = await axios.post(chatGPTTaskEndpoint, {
+            model: "gpt-4",
             prompt: "Generate unique Cloud Engineering, DevOps, and AI daily tasks for Facebook, Instagram, and LinkedIn.",
             max_tokens: 200
         }, { headers });
