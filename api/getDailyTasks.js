@@ -1,14 +1,10 @@
-const AWS = require("aws-sdk");
-const axios = require("axios");
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import axios from "axios";
 
-const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: "us-east-1",  
-});
+const s3 = new S3Client({ region: "us-east-1" });
 
 const bucketName = "social-media-automation-daily-tasks";
-const chatGPTTaskEndpoint = "https://api.openai.com/v1/engines/text-davinci-003/completions"; // Example ChatGPT API (replace with actual endpoint)
+const chatGPTTaskEndpoint = "https://api.openai.com/v1/engines/text-davinci-003/completions"; // Replace with actual ChatGPT API endpoint
 
 const headers = {
     "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -34,19 +30,19 @@ async function uploadToS3(platform, content) {
     const fileKey = `${platform}/${todayDate}.json`;
 
     try {
-        await s3.putObject({
+        await s3.send(new PutObjectCommand({
             Bucket: bucketName,
             Key: fileKey,
             Body: JSON.stringify({ task: content }),
             ContentType: "application/json"
-        }).promise();
+        }));
         console.log(`Uploaded ${platform} task to S3: ${fileKey}`);
     } catch (err) {
         console.error(`Error uploading to S3 for ${platform}:`, err);
     }
 }
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
     console.log("Fetching tasks from ChatGPT...");
     const tasks = await fetchChatGPTTasks();
 
@@ -60,7 +56,6 @@ exports.handler = async (event) => {
     const platforms = ["Facebook", "Instagram", "LinkedIn"];
     const splitTasks = tasks.split("\n");
 
-    // Ensure tasks are stored properly per platform
     for (let i = 0; i < platforms.length; i++) {
         await uploadToS3(platforms[i], splitTasks[i] || "No task available.");
     }
