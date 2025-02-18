@@ -3,9 +3,10 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install aws-amplify @aws-amplify/auth # Ensure aws-amplify is installed before build
-        - npm install  
-        - npm install -g npm@latest # Install all dependencies
+        - nvm use 20 # ✅ Use Node.js 20 (Supports latest NPM)
+        - npm install -g npm@10 # ✅ Install compatible NPM 10 (Avoid NPM 11)
+        - npm install aws-amplify @aws-amplify/auth
+        - npm install
     build:
       commands:
         - npm run build
