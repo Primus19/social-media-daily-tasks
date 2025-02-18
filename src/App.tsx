@@ -7,7 +7,11 @@ const s3 = new S3Client({ region: "us-east-1" });
 const bucketName = "social-media-automation-daily-tasks";
 
 function App() {
+<<<<<<< HEAD
   const [tasks, setTasks] = useState([]);
+=======
+  const [tasks, setTasks] = useState<SocialTasks[]>([]);
+>>>>>>> 751c3896c358027594d87df42ae6dc6f95cc3106
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
@@ -22,6 +26,7 @@ function App() {
       setLoading(true);
       setError(null);
 
+<<<<<<< HEAD
       // List all JSON posts from the S3 bucket
       const listCommand = new ListObjectsV2Command({ Bucket: bucketName });
       const { Contents } = await s3.send(listCommand);
@@ -62,6 +67,16 @@ function App() {
     } catch (err) {
       setError("Failed to fetch posts. Please try again later.");
       console.error("Error fetching posts from S3:", err);
+=======
+      // Fetch posts from S3 API endpoint (Replace with your actual API endpoint)
+      const response = await fetch('/api/get-posts');
+      const data = await response.json();
+
+      setTasks(data.posts);
+    } catch (err) {
+      setError('Failed to fetch posts. Please try again later.');
+      console.error('Error fetching posts:', err);
+>>>>>>> 751c3896c358027594d87df42ae6dc6f95cc3106
     } finally {
       setLoading(false);
     }
