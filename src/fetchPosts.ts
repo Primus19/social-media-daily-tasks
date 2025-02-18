@@ -1,11 +1,44 @@
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import { Amplify, Auth } from "aws-amplify";
+import awsConfig from "../aws-exports"; // Ensure aws-exports.js is properly configured
 
-const s3 = new S3Client({
-  region: "us-east-1",
-});
+// Configure Amplify
+Amplify.configure(awsConfig);
 
-async function fetchPosts(platform) {
+async function getS3Client() {
   try {
+    // Retrieve AWS credentials from Amplify IAM Role
+    const credentials = await Auth.currentCredentials();
+    if (!credentials) {
+      throw new Error("❌ Failed to retrieve Amplify IAM credentials.");
+    }
+
+    return new S3Client({
+      region: "us-east-1",
+      credentials,
+    });
+  } catch (error) {
+    console.error("❌ Error retrieving credentials from Amplify:", error);
+
+    // Fallback to environment variables if Amplify credentials fail
+    if (process.env.REACT_APP_AWS_ACCESS_KEY_ID && process.env.REACT_APP_AWS_SECRET_ACCESS_KEY) {
+      console.warn("⚠️ Using environment variables as a fallback for credentials.");
+      return new S3Client({
+        region: "us-east-1",
+        credentials: {
+          accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
+        },
+      });
+    } else {
+      throw new Error("❌ No valid AWS credentials found.");
+    }
+  }
+}
+
+async function fetchPosts(platform: string) {
+  try {
+    const s3 = await getS3Client();
     const bucketName = "social-media-automation-daily-tasks";
 
     // Use platform as prefix (folder name)
