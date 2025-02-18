@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Amplify from "aws-amplify";
+import { Amplify } from "aws-amplify";
 import awsConfig from "./aws-exports";
 import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
