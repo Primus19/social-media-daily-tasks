@@ -1,20 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Amplify } from "aws-amplify";
+import { Amplify, Auth } from "aws-amplify";
 import awsConfig from "./aws-exports";
 import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 
-// Amplify.configure(awsConfig); // Disabled for debugging
-
-// Configure S3 Client with IAM Role Credentials
-const s3 = new S3Client({
-    region: "us-east-1",
-    credentials: {
-        accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY
-    }
-});
+// Configure Amplify
+Amplify.configure(awsConfig);
 
 function App() {
   const [tasks, setTasks] = useState([]);
@@ -22,79 +14,140 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [fetchLogs, setFetchLogs] = useState([]);
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
+  // Log messages to UI and console
   const logMessage = (message) => {
     setFetchLogs(prevLogs => [...prevLogs, message]);
+    console.log("📜 LOG:", message);
   };
+
+  async function getS3Client() {
+    logMessage("🔍 Initializing S3 Client...");
+
+    try {
+      logMessage("🔍 Attempting to retrieve credentials from Amplify...");
+      const credentials = await Auth.currentCredentials();
+
+      if (!credentials || !credentials.accessKeyId) {
+        throw new Error("❌ Failed to retrieve valid Amplify IAM credentials.");
+      }
+
+      logMessage("✅ Successfully retrieved Amplify IAM credentials:");
+      logMessage(`🔑 Access Key ID: ${credentials.accessKeyId}`);
+      logMessage(`🔑 Session Token: ${credentials.sessionToken ? "Exists ✅" : "Missing ❌"}`);
+
+      return new S3Client({
+        region: "us-east-1",
+        credentials: {
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey,
+          sessionToken: credentials.sessionToken, // Required for assumed roles
+        },
+      });
+    } catch (error) {
+      logMessage(`❌ Error retrieving credentials from Amplify: ${error.message}`);
+
+      if (process.env.REACT_APP_AWS_ACCESS_KEY_ID && process.env.REACT_APP_AWS_SECRET_ACCESS_KEY) {
+        logMessage("⚠️ Using environment variables as a fallback for credentials.");
+        logMessage(`🔑 REACT_APP_AWS_ACCESS_KEY_ID: ${process.env.REACT_APP_AWS_ACCESS_KEY_ID}`);
+
+        return new S3Client({
+          region: "us-east-1",
+          credentials: {
+            accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
+          },
+        });
+      } else {
+        throw new Error("❌ No valid AWS credentials found.");
+      }
+    }
+  }
 
   const fetchTasks = async () => {
     try {
-        setLoading(true);
-        setError(null);
-        logMessage("🔍 Fetching posts from S3...");
+      setLoading(true);
+      setError(null);
+      logMessage("🔍 Fetching posts from S3...");
 
-        const listCommand = new ListObjectsV2Command({ 
-            Bucket: "social-media-automation-daily-tasks",
-            Prefix: "Facebook/" // Adjust for Instagram/LinkedIn
-        });
+      const s3 = await getS3Client();
+      const bucketName = "social-media-automation-daily-tasks";
+      const platforms = ["Facebook", "Instagram", "LinkedIn"];
+      let allTasks = [];
 
-        const { Contents } = await s3.send(listCommand);
-        
-        logMessage(`✅ S3 Response: ${Contents ? Contents.length + " files found." : "No files found!"}`);
+      for (const platform of platforms) {
+        logMessage(`📜 Fetching posts from S3 for platform: ${platform}...`);
+        logMessage(`🔍 Listing objects in bucket: ${bucketName}, folder: ${platform}/`);
 
-        if (!Contents || Contents.length === 0) {
-            setTasks([]);
-            return;
-        }
+        try {
+          const listCommand = new ListObjectsV2Command({
+            Bucket: bucketName,
+            Prefix: `${platform}/`,
+          });
 
-        const posts = await Promise.all(
+          const { Contents } = await s3.send(listCommand);
+
+          if (!Contents || Contents.length === 0) {
+            logMessage(`❌ No files found in ${platform} folder`);
+            continue;
+          }
+
+          logMessage(`✅ Found ${Contents.length} file(s) in ${platform} folder:`);
+
+          const platformPosts = await Promise.all(
             Contents.map(async (file) => {
-                if (file.Key.endsWith(".json")) {
-                    logMessage(`📂 Fetching file: ${file.Key}`);
-                    const getCommand = new GetObjectCommand({ Bucket: "social-media-automation-daily-tasks", Key: file.Key });
-                    
-                    try {
-                        const { Body } = await s3.send(getCommand);
+              if (file.Key.endsWith(".json")) {
+                logMessage(`📂 Fetching file: ${file.Key}`);
 
-                        const streamToString = (stream) =>
-                            new Promise((resolve, reject) => {
-                                let data = "";
-                                stream.on("data", (chunk) => (data += chunk));
-                                stream.on("end", () => resolve(data));
-                                stream.on("error", reject);
-                            });
+                const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
 
-                        const jsonData = await streamToString(Body);
-                        const parsedData = JSON.parse(jsonData);
+                try {
+                  const { Body } = await s3.send(getCommand);
 
-                        return { 
-                            ...parsedData, 
-                            date: file.LastModified, 
-                            platform: file.Key.split("/")[0] 
-                        };
-                    } catch (fetchError) {
-                        logMessage(`❌ Failed to fetch ${file.Key}: ${fetchError.message}`);
-                        return null;
-                    }
+                  const streamToString = (stream) =>
+                    new Promise((resolve, reject) => {
+                      let data = "";
+                      stream.on("data", (chunk) => (data += chunk));
+                      stream.on("end", () => resolve(data));
+                      stream.on("error", reject);
+                    });
+
+                  const jsonData = await streamToString(Body);
+                  const parsedData = JSON.parse(jsonData);
+
+                  return {
+                    ...parsedData,
+                    date: file.LastModified,
+                    platform,
+                  };
+                } catch (fetchError) {
+                  logMessage(`❌ Failed to fetch ${file.Key}: ${fetchError.message}`);
+                  return null;
                 }
-                return null;
+              }
+              return null;
             })
-        );
+          );
 
-        const validPosts = posts.filter(Boolean);
-        setTasks(validPosts);
-        logMessage(`✅ Successfully loaded ${validPosts.length} posts.`);
+          allTasks = [...allTasks, ...platformPosts.filter(Boolean)];
+        } catch (error) {
+          logMessage(`❌ Error fetching posts for ${platform}: ${error.message}`);
+        }
+      }
+
+      setTasks(allTasks);
+      logMessage(`✅ Successfully loaded ${allTasks.length} posts.`);
 
     } catch (err) {
-        setError("Failed to fetch posts. Please try again later.");
-        logMessage(`❌ Error fetching posts: ${err.message}`);
+      setError("Failed to fetch posts. Please try again later.");
+      logMessage(`❌ Error fetching posts: ${err.message}`);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-400 to-purple-500 p-6">
@@ -107,9 +160,9 @@ function App() {
         </div>
 
         {/* Fetch Logs */}
-        <div className="mb-6 p-4 bg-gray-100 rounded-lg shadow-md">
+        <div className="mb-6 p-4 bg-gray-100 rounded-lg shadow-md max-h-40 overflow-y-auto">
           <h2 className="text-lg font-semibold mb-2">📜 Fetch Logs</h2>
-          <ul className="text-sm text-gray-600 max-h-40 overflow-y-auto">
+          <ul className="text-sm text-gray-600">
             {fetchLogs.map((log, index) => (
               <li key={index}>• {log}</li>
             ))}
@@ -144,7 +197,6 @@ function App() {
           ))}
         </div>
 
-        {/* No Posts Message */}
         {!loading && tasks.length === 0 && (
           <div className="text-center text-gray-500 mt-4">No posts found for the selected filters.</div>
         )}

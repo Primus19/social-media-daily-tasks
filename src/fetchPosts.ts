@@ -1,6 +1,6 @@
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { Amplify, Auth } from "aws-amplify";
-import awsConfig from "../aws-exports"; // Ensure aws-exports.js is properly configured
+import awsConfig from "../aws-exports"; // Ensure aws-exports.js is correctly configured
 import { useState, useEffect } from "react";
 
 // Configure Amplify
@@ -10,8 +10,11 @@ export default function FetchPostsComponent() {
   const [logs, setLogs] = useState<string[]>([]);
 
   function addLog(message: string) {
-    setLogs((prevLogs) => [...prevLogs, message]); // Updates logs displayed in UI
-    console.log(message); // Also logs in console for debugging
+    setLogs((prevLogs) => {
+      const newLogs = [...prevLogs, message];
+      console.log("📝 Log added:", message);
+      return newLogs;
+    });
   }
 
   async function getS3Client() {
@@ -112,9 +115,9 @@ export default function FetchPostsComponent() {
   return (
     <div>
       <h2>📜 Fetch Logs</h2>
-      <div style={{ backgroundColor: "#f4f4f4", padding: "10px", borderRadius: "5px" }}>
-        {logs.map((log, index) => (
-          <p key={index} style={{ fontFamily: "monospace" }}>{log}</p>
+      <div style={{ backgroundColor: "#f4f4f4", padding: "10px", borderRadius: "5px", maxHeight: "300px", overflowY: "auto" }}>
+        {logs.length === 0 ? <p>No logs yet...</p> : logs.map((log, index) => (
+          <p key={index} style={{ fontFamily: "monospace", whiteSpace: "pre-wrap" }}>{log}</p>
         ))}
       </div>
     </div>
