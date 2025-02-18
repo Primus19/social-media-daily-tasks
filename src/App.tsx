@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import Amplify from "aws-amplify";
+import awsConfig from "./aws-exports";
 import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 
-const s3 = new S3Client({ region: "us-east-1" });
-const bucketName = "social-media-automation-daily-tasks";
+Amplify.configure(awsConfig);
+
+// Configure S3 Client with IAM Role Credentials
+const s3 = new S3Client({
+    region: "us-east-1",
+    credentials: {
+        accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY
+    }
+});
 
 function App() {
   const [tasks, setTasks] = useState([]);
@@ -27,7 +37,7 @@ function App() {
         logMessage("🔍 Fetching posts from S3...");
 
         const listCommand = new ListObjectsV2Command({ 
-            Bucket: bucketName,
+            Bucket: "social-media-automation-daily-tasks",
             Prefix: "Facebook/" // Adjust for Instagram/LinkedIn
         });
 
@@ -44,7 +54,7 @@ function App() {
             Contents.map(async (file) => {
                 if (file.Key.endsWith(".json")) {
                     logMessage(`📂 Fetching file: ${file.Key}`);
-                    const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
+                    const getCommand = new GetObjectCommand({ Bucket: "social-media-automation-daily-tasks", Key: file.Key });
                     
                     try {
                         const { Body } = await s3.send(getCommand);
