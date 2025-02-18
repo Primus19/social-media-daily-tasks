@@ -6,23 +6,30 @@ import awsConfig from "../aws-exports"; // Ensure aws-exports.js is properly con
 Amplify.configure(awsConfig);
 
 async function getS3Client() {
+  console.log("🔍 Initializing S3 Client...");
+
   try {
-    // Retrieve AWS credentials from Amplify IAM Role
+    console.log("🔍 Attempting to retrieve credentials from Amplify...");
     const credentials = await Auth.currentCredentials();
-    if (!credentials) {
-      throw new Error("❌ Failed to retrieve Amplify IAM credentials.");
+
+    if (!credentials || !credentials.accessKeyId) {
+      throw new Error("❌ Failed to retrieve valid Amplify IAM credentials.");
     }
+
+    console.log("✅ Successfully retrieved Amplify IAM credentials:");
+    console.log(`🔑 Access Key ID: ${credentials.accessKeyId}`);
 
     return new S3Client({
       region: "us-east-1",
       credentials,
     });
   } catch (error) {
-    console.error("❌ Error retrieving credentials from Amplify:", error);
+    console.error("❌ Error retrieving credentials from Amplify:", error.message);
 
-    // Fallback to environment variables if Amplify credentials fail
     if (process.env.REACT_APP_AWS_ACCESS_KEY_ID && process.env.REACT_APP_AWS_SECRET_ACCESS_KEY) {
       console.warn("⚠️ Using environment variables as a fallback for credentials.");
+      console.log(`🔑 REACT_APP_AWS_ACCESS_KEY_ID: ${process.env.REACT_APP_AWS_ACCESS_KEY_ID}`);
+
       return new S3Client({
         region: "us-east-1",
         credentials: {
@@ -37,11 +44,14 @@ async function getS3Client() {
 }
 
 async function fetchPosts(platform: string) {
+  console.log(`📜 Fetching posts for platform: ${platform}`);
+
   try {
     const s3 = await getS3Client();
     const bucketName = "social-media-automation-daily-tasks";
 
-    // Use platform as prefix (folder name)
+    console.log(`🔍 Listing objects in bucket: ${bucketName}, folder: ${platform}/`);
+
     const listCommand = new ListObjectsV2Command({
       Bucket: bucketName,
       Prefix: `${platform}/`, // Ensure the folder is specified
@@ -54,20 +64,28 @@ async function fetchPosts(platform: string) {
       return;
     }
 
+    console.log(`✅ Found ${response.Contents.length} file(s) in ${platform} folder:`);
+
     for (const file of response.Contents) {
-      console.log(`📜 Fetching file: ${file.Key}`);
+      console.log(`📜 Attempting to fetch file: ${file.Key}`);
 
       const getCommand = new GetObjectCommand({
         Bucket: bucketName,
         Key: file.Key, // Full path
       });
 
-      const object = await s3.send(getCommand);
-      const body = await object.Body?.transformToString(); // Read JSON file content
-      console.log(`✅ File content for ${file.Key}:`, JSON.parse(body || "{}"));
+      try {
+        const object = await s3.send(getCommand);
+        const body = await object.Body?.transformToString(); // Read JSON file content
+
+        console.log(`✅ Successfully fetched file: ${file.Key}`);
+        console.log(`📜 File content preview:\n${body?.substring(0, 500)}...`); // Display first 500 chars
+      } catch (fileError) {
+        console.error(`❌ Error fetching file: ${file.Key}`, fileError.message);
+      }
     }
   } catch (error) {
-    console.error(`❌ Error fetching posts for ${platform}:`, error);
+    console.error(`❌ Critical error fetching posts for ${platform}:`, error.message);
   }
 }
 
