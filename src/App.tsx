@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Amplify, Auth } from "aws-amplify";
+import { Amplify } from "aws-amplify";
 import awsConfig from "./aws-exports";
 import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 
-Amplify.configure({
-  ...awsConfig,
-  Auth: {
-      identityPoolId: undefined, // Disable Cognito to fix OAuth error
-      mandatorySignIn: false
-  }
-});
+Amplify.configure(awsConfig);
 
 // Configure S3 Client with IAM Role Credentials
 const s3 = new S3Client({
