@@ -8,11 +8,6 @@ const bucketName = "social-media-automation-daily-tasks";
 
 function App() {
   const [tasks, setTasks] = useState([]);
-
-  const [tasks, setTasks] = useState([]);
-
-  const [tasks, setTasks] = useState<SocialTasks[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
@@ -67,15 +62,6 @@ function App() {
     } catch (err) {
       setError("Failed to fetch posts. Please try again later.");
       console.error("Error fetching posts from S3:", err);
-
-      // Fetch posts from S3 API endpoint (Replace with your actual API endpoint)
-      const response = await fetch('/api/get-posts');
-      const data = await response.json();
-
-      setTasks(data.posts);
-    } catch (err) {
-      setError('Failed to fetch posts. Please try again later.');
-      console.error('Error fetching posts:', err);
     } finally {
       setLoading(false);
     }
