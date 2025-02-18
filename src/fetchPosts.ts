@@ -10,8 +10,8 @@ export default function FetchPostsComponent() {
   const [logs, setLogs] = useState<string[]>([]);
 
   function addLog(message: string) {
-    setLogs((prevLogs) => [...prevLogs, message]);
-    console.log(message);
+    setLogs((prevLogs) => [...prevLogs, message]); // Updates logs displayed in UI
+    console.log(message); // Also logs in console for debugging
   }
 
   async function getS3Client() {
@@ -58,7 +58,7 @@ export default function FetchPostsComponent() {
   }
 
   async function fetchPosts(platform: string) {
-    addLog(`📜 Fetching posts for platform: ${platform}`);
+    addLog(`📜 Fetching posts from S3 for platform: ${platform}...`);
 
     try {
       const s3 = await getS3Client();
@@ -99,7 +99,7 @@ export default function FetchPostsComponent() {
         }
       }
     } catch (error) {
-      addLog(`❌ Critical error fetching posts for ${platform}: ${error.message}`);
+      addLog(`❌ Error fetching posts for ${platform}: ${error.message}`);
     }
   }
 
@@ -111,7 +111,7 @@ export default function FetchPostsComponent() {
 
   return (
     <div>
-      <h2>📜 S3 Fetch Logs</h2>
+      <h2>📜 Fetch Logs</h2>
       <div style={{ backgroundColor: "#f4f4f4", padding: "10px", borderRadius: "5px" }}>
         {logs.map((log, index) => (
           <p key={index} style={{ fontFamily: "monospace" }}>{log}</p>
