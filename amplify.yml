@@ -3,7 +3,8 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install
+        - npm install aws-amplify  # Ensure aws-amplify is installed before build
+        - npm install  # Install all dependencies
     build:
       commands:
         - npm run build
