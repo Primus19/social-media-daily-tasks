@@ -5,9 +5,9 @@ frontend:
       commands:
         - nvm use 20
         - npm install -g npm@10
-        - npm uninstall aws-amplify
+        - npm uninstall aws-amplify @aws-amplify/auth
         - npm cache clean --force
-        - npm install aws-amplify@latest @aws-amplify/auth
+        - npm install aws-amplify@latest
         - npm install
     build:
       commands:
