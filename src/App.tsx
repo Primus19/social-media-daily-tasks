@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Amplify } from "aws-amplify";
-import { Auth } from "@aws-amplify/auth"; 
+import { Auth } from "aws-amplify/auth"; // ✅ Correct import for new versions
 import awsConfig from "./aws-exports";
 import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -171,36 +171,23 @@ function App() {
         </div>
 
         {/* Loading State */}
-        {loading && (
-          <div className="text-center text-blue-500 text-lg font-semibold">Loading posts...</div>
-        )}
+        {loading && <div className="text-center text-blue-500 text-lg font-semibold">Loading posts...</div>}
 
         {/* Error State */}
-        {error && (
-          <div className="text-center text-red-500 flex items-center justify-center mt-4">
-            <AlertCircle className="w-5 h-5 mr-2" /> {error}
-          </div>
-        )}
+        {error && <div className="text-center text-red-500 flex items-center justify-center mt-4">
+          <AlertCircle className="w-5 h-5 mr-2" /> {error}
+        </div>}
 
         {/* Posts List */}
         <div className="space-y-4">
           {tasks.map((task, index) => (
             <div key={index} className="border-l-8 border-blue-500 rounded-lg p-4 bg-gray-50 shadow-md hover:shadow-lg transition">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-700">{task.platform.toUpperCase()}</h2>
-                <span className="text-sm text-gray-500">
-                  <Calendar className="inline-block w-4 h-4 mr-1" />
-                  {format(new Date(task.date), 'PPP')}
-                </span>
-              </div>
+              <h2 className="text-xl font-semibold text-gray-700">{task.platform.toUpperCase()}</h2>
+              <span className="text-sm text-gray-500">{format(new Date(task.date), 'PPP')}</span>
               <p className="mt-2 text-gray-800 text-lg font-medium">{task.message}</p>
             </div>
           ))}
         </div>
-
-        {!loading && tasks.length === 0 && (
-          <div className="text-center text-gray-500 mt-4">No posts found for the selected filters.</div>
-        )}
       </div>
     </div>
   );
