@@ -5,7 +5,7 @@ import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 
-Amplify.configure(awsConfig);
+// Amplify.configure(awsConfig); // Disabled for debugging
 
 // Configure S3 Client with IAM Role Credentials
 const s3 = new S3Client({
