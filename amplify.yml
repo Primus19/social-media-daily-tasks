@@ -8,6 +8,7 @@ frontend:
         - npm uninstall aws-amplify @aws-amplify/auth
         - npm cache clean --force
         - npm install aws-amplify@latest
+        - npm install @aws-amplify/auth@latest
         - npm install
     build:
       commands:
