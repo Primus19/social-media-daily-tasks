@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import { Amplify } from "aws-amplify";
 import awsConfig from "./aws-exports";
-import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { RefreshCw, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 
 // Configure Amplify
@@ -12,55 +12,17 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fetchLogs, setFetchLogs] = useState([]);
+  const [fetchLogs, setFetchLogs] = useState<string[]>([]);
 
-  // Log messages to UI and console
-  const logMessage = (message) => {
-    setFetchLogs(prevLogs => [...prevLogs, message]);
+  // Function to log messages both to UI and console
+  const logMessage = (message: string) => {
+    setFetchLogs((prevLogs) => [...prevLogs, message]);
     console.log("📜 LOG:", message);
   };
 
   async function getS3Client() {
     logMessage("🔍 Initializing S3 Client...");
-
-    try {
-      logMessage("🔍 Attempting to retrieve credentials from Amplify...");
-      const credentials = await Auth.currentCredentials();
-
-      if (!credentials || !credentials.accessKeyId) {
-        throw new Error("❌ Failed to retrieve valid Amplify IAM credentials.");
-      }
-
-      logMessage("✅ Successfully retrieved Amplify IAM credentials:");
-      logMessage(`🔑 Access Key ID: ${credentials.accessKeyId}`);
-      logMessage(`🔑 Session Token: ${credentials.sessionToken ? "Exists ✅" : "Missing ❌"}`);
-
-      return new S3Client({
-        region: "us-east-1",
-        credentials: {
-          accessKeyId: credentials.accessKeyId,
-          secretAccessKey: credentials.secretAccessKey,
-          sessionToken: credentials.sessionToken, // Required for assumed roles
-        },
-      });
-    } catch (error) {
-      logMessage(`❌ Error retrieving credentials from Amplify: ${error.message}`);
-
-      if (process.env.REACT_APP_AWS_ACCESS_KEY_ID && process.env.REACT_APP_AWS_SECRET_ACCESS_KEY) {
-        logMessage("⚠️ Using environment variables as a fallback for credentials.");
-        logMessage(`🔑 REACT_APP_AWS_ACCESS_KEY_ID: ${process.env.REACT_APP_AWS_ACCESS_KEY_ID}`);
-
-        return new S3Client({
-          region: "us-east-1",
-          credentials: {
-            accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
-          },
-        });
-      } else {
-        throw new Error("❌ No valid AWS credentials found.");
-      }
-    }
+    return new S3Client({ region: "us-east-1" });
   }
 
   const fetchTasks = async () => {
@@ -72,11 +34,10 @@ function App() {
       const s3 = await getS3Client();
       const bucketName = "social-media-automation-daily-tasks";
       const platforms = ["Facebook", "Instagram", "LinkedIn"];
-      let allTasks = [];
+      let allTasks: any[] = [];
 
       for (const platform of platforms) {
         logMessage(`📜 Fetching posts from S3 for platform: ${platform}...`);
-        logMessage(`🔍 Listing objects in bucket: ${bucketName}, folder: ${platform}/`);
 
         try {
           const listCommand = new ListObjectsV2Command({
@@ -85,7 +46,6 @@ function App() {
           });
 
           const { Contents } = await s3.send(listCommand);
-
           if (!Contents || Contents.length === 0) {
             logMessage(`❌ No files found in ${platform} folder`);
             continue;
@@ -97,7 +57,6 @@ function App() {
             Contents.map(async (file) => {
               if (file.Key.endsWith(".json")) {
                 logMessage(`📂 Fetching file: ${file.Key}`);
-
                 const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
 
                 try {
@@ -136,7 +95,6 @@ function App() {
 
       setTasks(allTasks);
       logMessage(`✅ Successfully loaded ${allTasks.length} posts.`);
-
     } catch (err) {
       setError("Failed to fetch posts. Please try again later.");
       logMessage(`❌ Error fetching posts: ${err.message}`);
@@ -182,11 +140,14 @@ function App() {
           {tasks.map((task, index) => (
             <div key={index} className="border-l-8 border-blue-500 rounded-lg p-4 bg-gray-50 shadow-md hover:shadow-lg transition">
               <h2 className="text-xl font-semibold text-gray-700">{task.platform.toUpperCase()}</h2>
-              <span className="text-sm text-gray-500">{format(new Date(task.date), 'PPP')}</span>
+              <span className="text-sm text-gray-500">{format(new Date(task.date), "PPP")}</span>
               <p className="mt-2 text-gray-800 text-lg font-medium">{task.message}</p>
             </div>
           ))}
         </div>
+
+        {/* No Posts Message */}
+        {!loading && tasks.length === 0 && <div className="text-center text-gray-500 mt-4">No posts found.</div>}
       </div>
     </div>
   );
